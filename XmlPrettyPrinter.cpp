@@ -60,14 +60,44 @@ inline void XmlPrettyPrinter::WriteEatToken() {
 
 bool XmlPrettyPrinter::ParseAttributes() {
     bool insertWhitespaceBeforeAttribute = false;
-    Token token;
-    for (token = lexer.TryGetAttribute(); token != Token::InputEnd; token = lexer.TryGetAttribute()) {
+    auto lasttoken = Token::None;
+
+    while (!lexer.Done()) {
+        auto token = lexer.TryGetAttribute();
+        switch (token) {
+        case Token::AttrName:
+        case Token::AttrEqual:
+        case Token::AttrValue:
+            WriteEatToken();
+            break;
+        case Token::Whitespace:
+            if (lasttoken == Token::None ||
+                lasttoken == Token::AttrName ||
+                lasttoken == Token::AttrEqual ||
+                lasttoken == Token::AttrValue) {
+                outText.write(" ", 1);
+            }
+            lexer.EatToken();
+            break;
+        case Token::Linebreak:
+            // for the moment, let's ignore linebreaks between attributes
+            lexer.EatToken();
+            break;
+        default:
+            return token != Token::InputEnd;
+        }
+        lasttoken = token;
+    }
+
+    /*for (auto token = lexer.TryGetAttribute(); token != Token::InputEnd; token = lexer.TryGetAttribute()) {
         if (token == Token::Text) {
             if (insertWhitespaceBeforeAttribute) {
-                if (!indented && indentlevel > 0 && parms.insertIndents)
+                if (!indented && indentlevel > 0 && parms.insertIndents) {
                     Indent();
-                else
+                }
+                else {
                     outText.write(" ", 1);
+                }
 
                 insertWhitespaceBeforeAttribute = false;
             }
@@ -111,7 +141,7 @@ bool XmlPrettyPrinter::ParseAttributes() {
             return false; // something unexpected happened but we definately were not able to eat/close the end >
         }
     }
-    return token != Token::InputEnd;
+    return token != Token::InputEnd;*/
 }
 
 void XmlPrettyPrinter::Parse() {
@@ -297,6 +327,7 @@ void XmlPrettyPrinter::Parse() {
         }
         case Token::SelfClosingTagEnd: {
             WriteEatToken();
+            tagIsOpen = false;
             prevTag = NULL;
             AddNewline();
             break;

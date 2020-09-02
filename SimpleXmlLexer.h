@@ -14,6 +14,9 @@ enum class Token {
     Text,
     Comment,
     CData,
+    AttrName,
+    AttrEqual,
+    AttrValue,
     None
 };
 

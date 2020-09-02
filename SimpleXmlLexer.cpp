@@ -145,9 +145,9 @@ Token SimpleXmlLexer::TryGetName() {
 
 Token SimpleXmlLexer::TryGetAttribute() {
     auto pos = curpos;
-    char lastChar;
 
     tokenStart = curpos;
+    bool isAttrName = false;
     bool inAttrVal = false;
     char attrBoundary;
 
@@ -167,21 +167,46 @@ Token SimpleXmlLexer::TryGetAttribute() {
         if (inAttrVal) {
             if (*pos == attrBoundary) {
                 inAttrVal = false;
+                tokenEnd = pos + 1;
+                return Token::AttrValue;
             }
+        }
+        else if (*pos == '=') {
+            if (isAttrName) {
+                tokenEnd = pos;
+                return Token::AttrName;
+            }
+            tokenEnd = pos + 1;
+            return Token::AttrEqual;
         }
         else if (*pos == '"' || *pos == '\'') {
             inAttrVal = true;
             attrBoundary = *pos;
         }
-        else if (IsWhitespace(*pos) || IsLinebreak(*pos))
+        else if (IsWhitespace(*pos) || IsLinebreak(*pos)) {
+            if (isAttrName) {
+                tokenEnd = pos;
+                return Token::AttrName;
+            }
             break;
-        else if (*pos == '/' || *pos == '>' || *pos == '<')
+        }
+        else if (*pos == '/' || *pos == '>' || *pos == '<') {
+            if (isAttrName) {
+                tokenEnd = pos;
+                return Token::AttrName;
+            }
             break;
-        lastChar = *pos;
+        }
+        else {
+            isAttrName = true;
+        }
     }
+
     tokenEnd = pos;
-    if (TokenSize() == 0) {
-        if (pos[0] == '/' && pos[1] == '>' ) {
+    
+    return Token::None;
+    /*if (TokenSize() == 0) {
+        if (pos[0] == '/' && pos[1] == '>') {
             tokenEnd = pos + 2;
             return Token::SelfClosingTagEnd;
         }
@@ -192,5 +217,5 @@ Token SimpleXmlLexer::TryGetAttribute() {
         return Token::None;
     }
 
-    return Token::Text;
+    return Token::Text;*/
 }
